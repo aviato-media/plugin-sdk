@@ -1,6 +1,6 @@
 {
   "name": "@aviato-media/plugin-sdk",
-  "version": "0.0.0-development",
+  "version": "1.0.0",
   "description": "SDK for building plugins for Aviato.",
   "author": {
     "name": "Ato",
