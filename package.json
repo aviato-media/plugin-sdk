@@ -1,0 +1,77 @@
+{
+  "name": "@aviato-media/plugin-sdk",
+  "version": "0.0.0-development",
+  "description": "SDK for building plugins for Aviato.",
+  "author": {
+    "name": "Ato",
+    "url": "https://avi.ato.software"
+  },
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./tmpdir": {
+      "types": "./dist/tmpdir.d.ts",
+      "import": "./dist/tmpdir.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aviato-media/plugin-sdk.git"
+  },
+  "homepage": "https://github.com/aviato-media/plugin-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/aviato-media/plugin-sdk/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts src/tmpdir.ts --outdir dist --target bun --external zod --external picomatch && tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint 'src/**/*.ts'",
+    "lint:fix": "eslint --fix 'src/**/*.ts'",
+    "test": "bun test",
+    "clean": "rm -rf dist",
+    "prepack": "bun run clean && bun run build"
+  },
+  "dependencies": {
+    "picomatch": "^4.0.4",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@benhutchins/eslint-joy": "1.0.1",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.8",
+    "@semantic-release/npm": "^13.1.5",
+    "@semantic-release/release-notes-generator": "^14.0.3",
+    "@types/picomatch": "^4.0.3",
+    "bun-types": "latest",
+    "conventional-changelog-conventionalcommits": "^9.3.1",
+    "eslint": "^10.3.0",
+    "semantic-release": "^25.0.3",
+    "typescript": "^6.0.3"
+  },
+  "engines": {
+    "bun": ">=1.3.0"
+  },
+  "keywords": [
+    "aviato",
+    "plugin",
+    "sdk",
+    "media",
+    "json-rpc"
+  ],
+  "packageManager": "bun@1.3.11"
+}
