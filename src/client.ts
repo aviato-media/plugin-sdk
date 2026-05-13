@@ -125,36 +125,28 @@ export class PluginClient {
       metadata: opts?.metadata ?? {},
     })
 
-    let timedOut = false
     let timer: Timer | undefined
+    let timedOut = false
+
+    const work = Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ])
+
+    const racers: Promise<[string, string, number]>[] = [work]
     if (opts?.timeout) {
-      timer = setTimeout(() => {
-        timedOut = true
-        proc.kill()
-      }, opts.timeout)
+      racers.push(new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          timedOut = true
+          proc.kill()
+          reject(new Error(`Process timed out after ${opts.timeout}ms`))
+        }, opts.timeout)
+      }))
     }
 
     try {
-      const [stdout, stderr, exitCode] = await Promise.all([
-        new Response(proc.stdout).text(),
-        new Response(proc.stderr).text(),
-        proc.exited,
-      ])
-
-      if (timedOut) {
-        this.sendNotification('process.stopped', {
-          pid,
-          exitCode: null,
-        })
-        const error: Error & {
-          stdout?: string,
-          stderr?: string
-        } = new Error(`Process timed out after ${opts?.timeout}ms`)
-        error.stdout = stdout
-        error.stderr = stderr
-        throw error
-      }
-
+      const [stdout, stderr, exitCode] = await Promise.race(racers)
       this.sendNotification('process.stopped', {
         pid,
         exitCode,
@@ -167,11 +159,11 @@ export class PluginClient {
     } catch (err) {
       if (!timedOut) {
         proc.kill()
-        this.sendNotification('process.stopped', {
-          pid,
-          exitCode: null,
-        })
       }
+      this.sendNotification('process.stopped', {
+        pid,
+        exitCode: null,
+      })
       throw err
     } finally {
       if (timer) {
