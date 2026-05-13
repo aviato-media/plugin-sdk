@@ -146,9 +146,12 @@ export class PluginClient {
           pid,
           exitCode: null,
         })
-        const error = new Error(`Process timed out after ${opts?.timeout}ms`)
-        ;(error as any).stdout = stdout
-        ;(error as any).stderr = stderr
+        const error: Error & {
+          stdout?: string,
+          stderr?: string
+        } = new Error(`Process timed out after ${opts?.timeout}ms`)
+        error.stdout = stdout
+        error.stderr = stderr
         throw error
       }
 
