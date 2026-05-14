@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/aviato-media/plugin-sdk/compare/v1.0.1...v1.1.0) (2026-05-14)
+
+### Features
+
+* **types:** add OpenWith hook schemas and User-Agent parsing ([b75f9c4](https://github.com/aviato-media/plugin-sdk/commit/b75f9c4ff8e3558898e034e1b68b43f57b8a6507))
+
 ## [1.0.1](https://github.com/aviato-media/plugin-sdk/compare/v1.0.0...v1.0.1) (2026-05-13)
 
 ### Bug Fixes
