@@ -1,3 +1,9 @@
+## [1.1.1](https://github.com/aviato-media/plugin-sdk/compare/v1.1.0...v1.1.1) (2026-05-14)
+
+### Bug Fixes
+
+* plugin id needs to accept @author/plugin-name format ([70b44c1](https://github.com/aviato-media/plugin-sdk/commit/70b44c1eb3ad0ecfa16749fd32f3ad9db892f1fe))
+
 ## [1.1.0](https://github.com/aviato-media/plugin-sdk/compare/v1.0.1...v1.1.0) (2026-05-14)
 
 ### Features
