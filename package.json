@@ -46,7 +46,7 @@
   },
   "dependencies": {
     "picomatch": "^4.0.4",
-    "zod": "^4.3.6"
+    "zod": "4.3.6"
   },
   "devDependencies": {
     "@benhutchins/eslint-joy": "1.0.1",
