@@ -36,10 +36,21 @@ describe('pluginTmpDir', () => {
     expect(st.isDirectory()).toBe(true)
   })
 
+  test('accepts scoped plugin ids', async () => {
+    const { pluginTmpDir } = await import('./tmpdir.js')
+    const dir = await pluginTmpDir('@aviato-media/plugin-name')
+    expect(dir).toBe(join(scratchRoot, '@aviato-media', 'plugin-name'))
+    const st = await stat(dir)
+    expect(st.isDirectory()).toBe(true)
+  })
+
   test('rejects unsafe plugin ids', async () => {
     const { pluginTmpDir } = await import('./tmpdir.js')
     await expect(pluginTmpDir('../escape')).rejects.toThrow(/invalid pluginId/)
     await expect(pluginTmpDir('with/slash')).rejects.toThrow(/invalid pluginId/)
+    await expect(pluginTmpDir('@scope/with/extra')).rejects.toThrow(/invalid pluginId/)
+    await expect(pluginTmpDir('@/missing-scope')).rejects.toThrow(/invalid pluginId/)
+    await expect(pluginTmpDir('@scope/')).rejects.toThrow(/invalid pluginId/)
     await expect(pluginTmpDir('Capital')).rejects.toThrow(/invalid pluginId/)
     await expect(pluginTmpDir('')).rejects.toThrow(/invalid pluginId/)
   })

@@ -19,7 +19,10 @@ const ROOT_NAME = 'aviato-plugins'
 // Manifest validation already enforces this character set on plugin ids,
 // but the SDK is consumed by third-party authors so we re-check here to
 // guarantee no `..`/separator characters reach the path-join below.
-const SAFE_ID_RE = /^[a-z0-9-]+$/
+// Mirrors npm scoped-package naming: `name` or `@scope/name`, lowercase
+// alphanumeric + hyphen segments. The single `/` in a scoped id is safe
+// against traversal because `.` and additional separators are excluded.
+const SAFE_ID_RE = /^(?:@[a-z0-9-]+\/)?[a-z0-9-]+$/
 
 let cachedRoot: string | null = null
 
