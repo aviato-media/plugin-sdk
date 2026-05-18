@@ -169,6 +169,10 @@ describe('schema validation', () => {
         isDesktop: false,
         isTV: false,
       },
+      server: {
+        baseUrl: 'https://example',
+        externallyReachable: true,
+      },
       openWith: [],
     })).not.toThrow()
   })

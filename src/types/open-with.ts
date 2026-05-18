@@ -105,12 +105,39 @@ const OpenWithFileSchema = z.object({
 })
 
 /**
+ * Aviato server reachability info attached to hook payloads invoked from
+ * an HTTP request scope. Plugins that need to construct other Aviato URLs
+ * (share links, callback URLs, manifest URLs, etc.) should base them on
+ * `baseUrl` rather than parsing the opaque `streamUrl`.
+ *
+ * `baseUrl` is the absolute base (`https://host[:port]`, no trailing slash)
+ * the calling client used to reach the server, resolved with priority:
+ * configured external URL > reverse-proxy `Forwarded` / `X-Forwarded-*` >
+ * the request's own `Host` header.
+ *
+ * `externallyReachable` is `true` when the server has strong evidence the
+ * URL works from the public internet — either an admin-configured
+ * external/TLS URL, or an HTTPS connection arriving through a reverse
+ * proxy (which implies a public domain + certificate). When `false`, the
+ * URL works for the current client but may be LAN-only — plugins
+ * generating links for outbound delivery (email, push, webhook) should
+ * treat that as a soft "do not send" signal.
+ */
+export const ServerContextSchema = z.object({
+  baseUrl: z.string(),
+  externallyReachable: z.boolean(),
+})
+export type ServerContext = z.infer<typeof ServerContextSchema>
+
+/**
  * Payload dispatched on `ui.openWith`. The hook is a serial pipeline: each
  * subscribed plugin receives this shape, may append entries to `openWith[]`,
  * and returns the mutated payload (or `null` to pass through unchanged).
  *
  * `streamUrl` and subtitle URLs are pre-built by the server with auth
  * already attached (`?token=...`), so plugins should treat them as opaque.
+ * `server.baseUrl` is provided for plugins that need to construct other
+ * Aviato-pointing URLs (e.g. plugin-served callback endpoints).
  */
 export const OpenWithPayloadSchema = z.object({
   itemId: z.string(),
@@ -119,6 +146,7 @@ export const OpenWithPayloadSchema = z.object({
   streamUrl: z.string(),
   subtitles: z.array(OpenWithSubtitleSchema),
   userAgent: UserAgentInfoSchema,
+  server: ServerContextSchema,
   openWith: z.array(OpenWithOptionSchema),
 })
 export type OpenWithPayload = z.infer<typeof OpenWithPayloadSchema>
