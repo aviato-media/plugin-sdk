@@ -4,16 +4,24 @@
 // extracted streams) should write under `pluginTmpDir(id)` rather than a
 // hardcoded `/tmp/...` path. Centralizing this means:
 //   - cross-platform correctness (Windows has no `/tmp`)
+//   - everything stays on the Aviato data volume, so renames between
+//     scratch space and `<dataDir>/plugins` never cross devices (EXDEV)
 //   - the server can clean up stale plugin scratch dirs in one place
-//     (see packages/server/src/scheduler/plugin-tmp-cleanup.ts)
 //   - tests and dev runs can override AVIATO_PLUGIN_TMP_DIR to redirect
 //     scratch IO to a sandbox without modifying plugin code
+//
+// Resolution order:
+//   1. AVIATO_PLUGIN_TMP_DIR (explicit override, also what the host sets)
+//   2. <AVIATO_DATA_PATH>/tmp/plugins (the path the server defaults to)
+//   3. <os.tmpdir()>/aviato-plugins (last-resort fallback for plugins run
+//      outside an Aviato host — unit-test runs of the SDK itself)
 
 import { mkdir } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
 const ROOT_OVERRIDE_ENV = 'AVIATO_PLUGIN_TMP_DIR'
+const DATA_PATH_ENV = 'AVIATO_DATA_PATH'
 const ROOT_NAME = 'aviato-plugins'
 
 // Manifest validation already enforces this character set on plugin ids,
@@ -30,7 +38,17 @@ function pluginTmpRoot (): string {
   if (cachedRoot != null) {
     return cachedRoot
   }
-  cachedRoot = process.env[ROOT_OVERRIDE_ENV] ?? join(tmpdir(), ROOT_NAME)
+  const override = process.env[ROOT_OVERRIDE_ENV]
+  if (override) {
+    cachedRoot = override
+    return cachedRoot
+  }
+  const dataPath = process.env[DATA_PATH_ENV]
+  if (dataPath) {
+    cachedRoot = join(dataPath, 'tmp', 'plugins')
+    return cachedRoot
+  }
+  cachedRoot = join(tmpdir(), ROOT_NAME)
   return cachedRoot
 }
 

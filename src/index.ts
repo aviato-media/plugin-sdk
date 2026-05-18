@@ -1,5 +1,7 @@
 export type { RunOptions, RunResult, SpawnOptions } from './client.js'
 export { PluginClient } from './client.js'
+export type { LogFn, Logger, LoggerOptions, LogLevel } from './logger.js'
+export { createLogger, LOG_LEVELS } from './logger.js'
 export type {
   ArtworkSearchHandlers,
   FilesystemEmitters,
