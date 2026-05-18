@@ -1,3 +1,10 @@
+## [1.2.0](https://github.com/aviato-media/plugin-sdk/compare/v1.1.1...v1.2.0) (2026-05-18)
+
+### Features
+
+* add new ServerContext, exposed by Server when invoking hooks ([9f8a2e8](https://github.com/aviato-media/plugin-sdk/commit/9f8a2e892e4a7fb86f84a38defa5712d605b5ef5))
+* standardize plugin logging ([303fc68](https://github.com/aviato-media/plugin-sdk/commit/303fc68880902cc016a1bc769b08fe41a45bc981))
+
 ## [1.1.1](https://github.com/aviato-media/plugin-sdk/compare/v1.1.0...v1.1.1) (2026-05-14)
 
 ### Bug Fixes
