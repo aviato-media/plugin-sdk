@@ -1,10 +1,23 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, it, test } from 'bun:test'
 
 import {
+  FormFieldInputSchema,
   UIActionSchemaSchema,
   UIFormSchemaSchema,
   UIMetadataSchemaSchema,
 } from './ui.js'
+
+describe('FormFieldInputSchema', () => {
+  it('accepts the secret input type', () => {
+    expect(FormFieldInputSchema.parse('secret')).toBe('secret')
+  })
+
+  it('still accepts existing input types', () => {
+    for (const v of ['text', 'toggle', 'string-list'] as const) {
+      expect(FormFieldInputSchema.parse(v)).toBe(v)
+    }
+  })
+})
 
 describe('UIFormSchema', () => {
   test('validates a settings form', () => {

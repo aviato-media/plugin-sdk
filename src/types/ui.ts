@@ -21,7 +21,7 @@ export type SlotId = z.infer<typeof SlotIdSchema>
 // ── Form Fields ─────────────────────────────────────────
 
 export const FormFieldInputSchema = z.enum([
-  'text', 'number', 'toggle', 'select', 'multi-select',
+  'text', 'secret', 'number', 'toggle', 'select', 'multi-select',
   'string-list', 'file-path', 'color', 'slider',
 ])
 export type FormFieldInput = z.infer<typeof FormFieldInputSchema>
