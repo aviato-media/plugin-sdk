@@ -1,5 +1,15 @@
-export type { RunOptions, RunResult, SpawnOptions } from './client.js'
+export type { RpcError, RunOptions, RunResult, SpawnOptions } from './client.js'
 export { PluginClient } from './client.js'
+export type {
+  AccountChange,
+  AccountsApi,
+  ConfigApi,
+  HostApi,
+  HostMethods,
+  HostNotifications,
+  HostTransport,
+} from './host/index.js'
+export { createHostApi } from './host/index.js'
 export type { LogFn, Logger, LoggerOptions, LogLevel } from './logger.js'
 export { createLogger, LOG_LEVELS } from './logger.js'
 export type {

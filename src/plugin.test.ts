@@ -336,6 +336,16 @@ describe('createPlugin', () => {
     expect(methods.has('artworkSearch.search')).toBe(true)
   })
 
+  test('exposes a typed host API wired to the client', () => {
+    const instance = createPlugin({})
+    expect(instance.host).toBeDefined()
+    // The instance host is the same cached facade exposed on the client.
+    expect(instance.host).toBe(instance.client.host)
+    expect(typeof instance.host.accounts.get).toBe('function')
+    expect(typeof instance.host.config.get).toBe('function')
+    expect(typeof instance.host.onNotification).toBe('function')
+  })
+
   test('unknown capability keys are ignored', () => {
     const instance = createPlugin({
       unknown: {} as any,

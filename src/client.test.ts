@@ -1,7 +1,12 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, it, test } from 'bun:test'
 
 import { PluginClient } from './client.js'
 import { JSON_RPC_ERRORS } from './types/jsonrpc.js'
+
+// Each PluginClient attaches a process.stdin listener; this suite creates many
+// short-lived clients, so lift Node's listener cap to avoid spurious warnings.
+// (Production plugins create a single long-lived client.)
+process.stdin.setMaxListeners(0)
 
 type StdinHandler = (chunk: string) => void
 
@@ -404,5 +409,282 @@ describe('PluginClient', () => {
     expect(started.params.metadata).toEqual({
       kind: 'demo',
     })
+  })
+})
+
+describe('PluginClient outbound calls', () => {
+  it('sends a request to stdout and resolves on matching response', async () => {
+    const writes: string[] = []
+    const originalWrite = process.stdout.write.bind(process.stdout)
+    process.stdout.write = ((chunk: any, ...args: any[]) => {
+      writes.push(typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString())
+      return originalWrite(chunk, ...args)
+    }) as typeof process.stdout.write
+
+    try {
+      const client = new PluginClient()
+      const pending = client.call('host.getAccount', { name: 'work' })
+
+      const reqLine = writes.find(l => l.includes('host.getAccount'))
+      expect(reqLine).toBeTruthy()
+      const req = JSON.parse(reqLine!.trim())
+      expect(req.jsonrpc).toBe('2.0')
+      expect(req.method).toBe('host.getAccount')
+      expect(req.params).toEqual({ name: 'work' })
+      expect(typeof req.id === 'number' || typeof req.id === 'string').toBe(true)
+
+      client.handleIncoming({
+        jsonrpc: '2.0',
+        id: req.id,
+        result: {
+          name: 'work',
+          region: 'us-east-1',
+        },
+      })
+
+      const result = await pending
+      expect(result).toEqual({
+        name: 'work',
+        region: 'us-east-1',
+      })
+    } finally {
+      process.stdout.write = originalWrite
+    }
+  })
+
+  it('rejects when the response carries an error', async () => {
+    const originalWrite = process.stdout.write.bind(process.stdout)
+    process.stdout.write = (() => true) as typeof process.stdout.write
+    try {
+      const client = new PluginClient()
+      const pending = client.call('host.getAccount', { name: 'missing' })
+      const sentId = client._lastRequestIdForTest()
+      expect(sentId).toBeTruthy()
+      client.handleIncoming({
+        jsonrpc: '2.0',
+        id: sentId,
+        error: {
+          code: -32004,
+          message: 'AccountNotFound',
+        },
+      })
+      await expect(pending).rejects.toMatchObject({ message: expect.stringMatching(/AccountNotFound/) })
+    } finally {
+      process.stdout.write = originalWrite
+    }
+  })
+
+  it('does not interfere with incoming host→plugin requests (existing path)', async () => {
+    // Smoke test: register a method and ensure handleIncoming still dispatches it.
+    const originalWrite = process.stdout.write.bind(process.stdout)
+    const writes: string[] = []
+    process.stdout.write = ((chunk: any, ..._args: any[]) => {
+      writes.push(typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString())
+      return true
+    }) as typeof process.stdout.write
+    try {
+      const client = new PluginClient()
+      client.registerMethod('echo', async (params) => ({ echoed: params }))
+      // Simulate the server sending an incoming request.
+      client.handleIncoming({
+        jsonrpc: '2.0',
+        id: 42,
+        method: 'echo',
+        params: { hello: 'world' },
+      })
+      // Allow the async handler to complete.
+      await new Promise(r => setTimeout(r, 10))
+      const respLine = writes.find(l => l.includes('"id":42'))
+      expect(respLine).toBeTruthy()
+      const resp = JSON.parse(respLine!.trim())
+      expect(resp.result).toEqual({ echoed: { hello: 'world' } })
+    } finally {
+      process.stdout.write = originalWrite
+    }
+  })
+})
+
+describe('PluginClient onNotification', () => {
+  const notify = (client: PluginClient, params: Record<string, unknown>) =>
+    client.handleIncoming({
+      jsonrpc: '2.0',
+      method: 'host.accountChanged',
+      params,
+    })
+
+  it('invokes a handler when a matching notification arrives', () => {
+    const client = new PluginClient()
+    const seen: Array<Record<string, unknown>> = []
+    client.onNotification('host.accountChanged', p => seen.push(p))
+
+    notify(client, {
+      name: 'work',
+      change: 'updated',
+    })
+
+    expect(seen).toEqual([{
+      name: 'work',
+      change: 'updated',
+    }])
+  })
+
+  it('supports multiple subscribers for the same method', () => {
+    const client = new PluginClient()
+    let aCount = 0
+    let bCount = 0
+    client.onNotification('host.accountChanged', () => {
+      aCount++
+    })
+    client.onNotification('host.accountChanged', () => {
+      bCount++
+    })
+
+    notify(client, {
+      name: 'work',
+      change: 'created',
+    })
+
+    expect(aCount).toBe(1)
+    expect(bCount).toBe(1)
+  })
+
+  it('only invokes handlers registered for the matching method', () => {
+    const client = new PluginClient()
+    let otherCount = 0
+    client.onNotification('host.somethingElse', () => {
+      otherCount++
+    })
+
+    notify(client, {
+      name: 'work',
+      change: 'updated',
+    })
+
+    expect(otherCount).toBe(0)
+  })
+
+  it('does not treat a message with an id as a notification (it is a request)', async () => {
+    const client = new PluginClient()
+    const seen: Array<Record<string, unknown>> = []
+    client.onNotification('host.accountChanged', p => seen.push(p))
+
+    client.handleIncoming({
+      jsonrpc: '2.0',
+      id: 99,
+      method: 'host.accountChanged',
+      params: {
+        name: 'work',
+        change: 'updated',
+      },
+    })
+
+    // Allow any async dispatch to complete.
+    await new Promise(r => setTimeout(r, 10))
+
+    expect(seen).toEqual([])
+  })
+
+  it('stops invoking a handler after its unsubscribe is called', () => {
+    const client = new PluginClient()
+    let count = 0
+    const unsubscribe = client.onNotification('host.accountChanged', () => {
+      count++
+    })
+
+    notify(client, {
+      name: 'work',
+      change: 'updated',
+    })
+    expect(count).toBe(1)
+
+    unsubscribe()
+    notify(client, {
+      name: 'work',
+      change: 'updated',
+    })
+    expect(count).toBe(1)
+  })
+
+  it('isolates a throwing handler so other handlers still run', () => {
+    const client = new PluginClient()
+    let goodCount = 0
+    client.onNotification('host.accountChanged', () => {
+      throw new Error('boom')
+    })
+    client.onNotification('host.accountChanged', () => {
+      goodCount++
+    })
+
+    expect(() => notify(client, {
+      name: 'work',
+      change: 'updated',
+    })).not.toThrow()
+    expect(goodCount).toBe(1)
+  })
+})
+
+describe('PluginClient call() robustness', () => {
+  it('rejects with a timeout error when no response arrives', async () => {
+    const originalWrite = process.stdout.write.bind(process.stdout)
+    process.stdout.write = (() => true) as typeof process.stdout.write
+    try {
+      const client = new PluginClient()
+      await expect(
+        client.call('host.getAccount', { name: 'slow' }, { timeoutMs: 20 }),
+      ).rejects.toThrow(/timed out after 20ms/)
+    } finally {
+      process.stdout.write = originalWrite
+    }
+  })
+
+  it('matches the response even when the host echoes the id as a string', async () => {
+    const originalWrite = process.stdout.write.bind(process.stdout)
+    process.stdout.write = (() => true) as typeof process.stdout.write
+    try {
+      const client = new PluginClient()
+      const pending = client.call('host.getAccount', { name: 'work' })
+      const sentId = client._lastRequestIdForTest()
+      client.handleIncoming({
+        jsonrpc: '2.0',
+        id: String(sentId),
+        result: { ok: true },
+      })
+      await expect(pending).resolves.toEqual({ ok: true })
+    } finally {
+      process.stdout.write = originalWrite
+    }
+  })
+
+  it('propagates the JSON-RPC error code and data on rejection', async () => {
+    const originalWrite = process.stdout.write.bind(process.stdout)
+    process.stdout.write = (() => true) as typeof process.stdout.write
+    try {
+      const client = new PluginClient()
+      const pending = client.call('host.getAccount', { name: 'missing' })
+      const sentId = client._lastRequestIdForTest()
+      client.handleIncoming({
+        jsonrpc: '2.0',
+        id: sentId,
+        error: {
+          code: -32004,
+          message: 'AccountNotFound',
+          data: { name: 'missing' },
+        },
+      })
+      await expect(pending).rejects.toMatchObject({
+        message: 'AccountNotFound',
+        code: -32004,
+        data: { name: 'missing' },
+      })
+    } finally {
+      process.stdout.write = originalWrite
+    }
+  })
+
+  it('ignores non-object incoming messages without throwing', () => {
+    const client = new PluginClient()
+    // null/primitive JSON values must not crash the dispatcher.
+    expect(() => client.handleIncoming(null as unknown as Record<string, unknown>)).not.toThrow()
+    expect(() => client.handleIncoming(5 as unknown as Record<string, unknown>)).not.toThrow()
   })
 })

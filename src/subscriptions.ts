@@ -1,4 +1,5 @@
 import type { PluginClient } from './client.js'
+import type { HostApi } from './host/index.js'
 
 type EventHandler = (payload: Record<string, unknown>) => void | Promise<void>
 type HookHandler = (payload: Record<string, unknown>) => Promise<Record<string, unknown> | null>
@@ -45,6 +46,8 @@ export interface PluginInstance {
   events: PluginEventEmitter
   hooks: PluginHookEmitter
   views: PluginViewEmitter
+  /** Typed, contract-checked API for calling the host (e.g. `host.accounts.get(name)`). */
+  host: HostApi
 }
 
 export function createSubscriptionBuilders (client: PluginClient): {

@@ -261,5 +261,6 @@ export function createPlugin (handlers: PluginHandlers): PluginInstance {
     events,
     hooks,
     views,
+    host: client.host,
   }
 }
