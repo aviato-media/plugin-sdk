@@ -1,3 +1,10 @@
+## [1.3.0](https://github.com/aviato-media/plugin-sdk/compare/v1.2.0...v1.3.0) (2026-05-23)
+
+### Features
+
+* add secret form-field input type ([fe7642b](https://github.com/aviato-media/plugin-sdk/commit/fe7642b8a79556547fc07317aa276243de1c812a))
+* bidirectional RPC ([cfee095](https://github.com/aviato-media/plugin-sdk/commit/cfee09531bae6c27079e7c8f0f278f2676f57509))
+
 ## [1.2.0](https://github.com/aviato-media/plugin-sdk/compare/v1.1.1...v1.2.0) (2026-05-18)
 
 ### Features
