@@ -1,3 +1,10 @@
+## [1.4.0](https://github.com/aviato-media/plugin-sdk/compare/v1.3.0...v1.4.0) (2026-05-25)
+
+### Features
+
+* add capability registry as the single source of truth ([f6c9411](https://github.com/aviato-media/plugin-sdk/commit/f6c9411edfea51b667f588896fb40dc4d0e44002))
+* add convert capability ([1c42a16](https://github.com/aviato-media/plugin-sdk/commit/1c42a168be12f6eaebf8aa66d8fae34fbd4212db))
+
 ## [1.3.0](https://github.com/aviato-media/plugin-sdk/compare/v1.2.0...v1.3.0) (2026-05-23)
 
 ### Features
