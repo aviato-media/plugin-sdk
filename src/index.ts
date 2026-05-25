@@ -1,3 +1,11 @@
+export type { Capability } from './capabilities.js'
+export {
+  CAPABILITIES,
+  CAPABILITY_DESCRIPTIONS,
+  CAPABILITY_LABELS,
+  CAPABILITY_METADATA,
+  CapabilitySchema,
+} from './capabilities.js'
 export type { RpcError, RunOptions, RunResult, SpawnOptions } from './client.js'
 export { PluginClient } from './client.js'
 export type {

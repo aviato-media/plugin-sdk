@@ -1,3 +1,4 @@
+import type { Capability } from './capabilities.js'
 import { PluginClient } from './client.js'
 import type { PluginInstance } from './subscriptions.js'
 import { createSubscriptionBuilders } from './subscriptions.js'
@@ -86,6 +87,9 @@ export interface PluginHandlers {
   filesystem?: FilesystemHandlers
   indexer?: IndexerHandlers
   library?: LibraryHandlers
+  // `ui` is a handler-level key only — it registers the `ui.getSchemas` RPC.
+  // It is NOT a manifest capability (see capabilities.ts); plugins do not
+  // declare `"ui"` in plugin.json `capabilities`.
   ui?: UIHandlers
   'media-scan'?: MediaScanHandlers
   'artwork-search'?: ArtworkSearchHandlers
@@ -234,7 +238,10 @@ function registerArtworkSearch (client: PluginClient, handlers: ArtworkSearchHan
 
 // ── Main entry point ────────────────────────────────────
 
-const capabilityRegistrars: Record<string, (client: PluginClient, handlers: unknown) => void> = {
+// Keyed by every manifest Capability, plus the handler-only `ui` key. Adding a
+// new Capability without a registrar here is a compile error — the source of
+// truth (capabilities.ts) and the runtime registrars cannot drift apart.
+const capabilityRegistrars: Record<Capability | 'ui', (client: PluginClient, handlers: unknown) => void> = {
   filesystem: (c, h) => registerFilesystem(c, h as FilesystemHandlers),
   indexer: (c, h) => registerIndexer(c, h as IndexerHandlers),
   library: (c, h) => registerLibrary(c, h as LibraryHandlers),
@@ -246,9 +253,15 @@ const capabilityRegistrars: Record<string, (client: PluginClient, handlers: unkn
 export function createPlugin (handlers: PluginHandlers): PluginInstance {
   const client = new PluginClient()
 
+  // `handlers` is an open record (PluginHandlers has a string index signature),
+  // so look up by arbitrary string and tolerate a miss for unknown keys.
+  const registrars: Record<string, ((client: PluginClient, handlers: unknown) => void) | undefined> = capabilityRegistrars
   for (const [capability, capHandlers] of Object.entries(handlers)) {
-    const registrar = capabilityRegistrars[capability]
-    if (registrar) {
+    const registrar = registrars[capability]
+    // `capHandlers` can be undefined when a plugin passes e.g.
+    // `{ convert: enabled ? handlers : undefined }` — skip those so a
+    // registrar never dereferences an absent handler at construction time.
+    if (registrar && capHandlers) {
       registrar(client, capHandlers)
     }
   }

@@ -15,6 +15,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./capabilities": {
+      "types": "./dist/capabilities.d.ts",
+      "import": "./dist/capabilities.js"
+    },
     "./tmpdir": {
       "types": "./dist/tmpdir.d.ts",
       "import": "./dist/tmpdir.js"
@@ -36,7 +40,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "bun build src/index.ts src/tmpdir.ts --outdir dist --target bun --external zod --external picomatch && tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "build": "bun build src/index.ts src/capabilities.ts src/tmpdir.ts --outdir dist --target bun --external zod --external picomatch && tsc --emitDeclarationOnly -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint 'src/**/*.ts'",
     "lint:fix": "eslint --fix 'src/**/*.ts'",
@@ -45,9 +49,11 @@
     "prepack": "bun run clean && bun run build",
     "prepare": "husky"
   },
+  "peerDependencies": {
+    "zod": "^4.1.0"
+  },
   "dependencies": {
-    "picomatch": "^4.0.4",
-    "zod": "4.3.6"
+    "picomatch": "^4.0.4"
   },
   "devDependencies": {
     "@benhutchins/eslint-joy": "1.0.1",
@@ -63,7 +69,8 @@
     "eslint": "^10.3.0",
     "husky": "^9.1.7",
     "semantic-release": "^25.0.3",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "zod": "^4.4.3"
   },
   "engines": {
     "bun": ">=1.3.0"
