@@ -22,6 +22,8 @@ export type { LogFn, Logger, LoggerOptions, LogLevel } from './logger.js'
 export { createLogger, LOG_LEVELS } from './logger.js'
 export type {
   ArtworkSearchHandlers,
+  ConvertEmitters,
+  ConvertHandlers,
   FilesystemEmitters,
   FilesystemHandlers,
   IndexerHandlers,

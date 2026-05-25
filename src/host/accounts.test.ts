@@ -77,6 +77,7 @@ describe('host accounts API', () => {
         })
         return { name: (params as { name: string }).name }
       }) as HostTransport['call'],
+      sendNotification: () => {},
       onNotification: () => () => {},
     }
 

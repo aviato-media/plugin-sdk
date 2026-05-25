@@ -20,9 +20,9 @@ describe('capabilities', () => {
     expect(CapabilitySchema.safeParse('bogus').success).toBe(false)
   })
 
-  test('the canonical set is exactly the five manifest capabilities', () => {
+  test('the canonical set is exactly the six manifest capabilities', () => {
     expect([...CAPABILITIES].sort()).toEqual(
-      ['artwork-search', 'filesystem', 'indexer', 'library', 'media-scan'],
+      ['artwork-search', 'convert', 'filesystem', 'indexer', 'library', 'media-scan'],
     )
   })
 

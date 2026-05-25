@@ -4,6 +4,13 @@ import type { PluginInstance } from './subscriptions.js'
 import { createSubscriptionBuilders } from './subscriptions.js'
 import type { ArtworkSearchRequest, ArtworkSearchResult } from './types/artwork-search.js'
 import type { ExtensionMap } from './types/bundle.js'
+import type {
+  ConvertCancelRequest,
+  ConvertGetOptionsRequest,
+  ConvertGetOptionsResponse,
+  ConvertRequest,
+  ConvertResponse,
+} from './types/convert.js'
 import type { EntityDetailRequest, EntityDetailResult } from './types/entity.js'
 import type { DiscoveredFile, ScanResult, ValidationResult } from './types/filesystem.js'
 import type {
@@ -83,6 +90,34 @@ export interface ArtworkSearchHandlers {
   search: (request: ArtworkSearchRequest) => Promise<ArtworkSearchResult>
 }
 
+export interface ConvertEmitters {
+  /**
+   * Report conversion progress to the host while `convert` runs. The host
+   * forwards it to admin UIs over SSE. `progress` is a 0..1 fraction, or
+   * `null` if not yet computable; `message` is an optional human-readable
+   * status. Rate-limit to ≤ ~2/sec. The SDK owns the wire format and routes
+   * this through the typed host facade (`convert.progress`) — plugins never
+   * hand-write the notification.
+   */
+  reportProgress: (progress: number | null, message?: string) => void
+}
+
+export interface ConvertHandlers {
+  getOptions: (request: ConvertGetOptionsRequest) => Promise<ConvertGetOptionsResponse>
+  convert: (request: ConvertRequest, emitters: ConvertEmitters) => Promise<ConvertResponse>
+  /**
+   * Optional. Called by the server when a running convert job is
+   * cancelled. The plugin should interrupt the in-flight
+   * `convert.convert` matching `sessionId` (typically by killing the
+   * spawned ffmpeg child). The original `convert.convert` call is
+   * expected to reject with an error after the cancel takes effect.
+   *
+   * Plugins that can't interrupt their work may leave this undefined;
+   * the server skips the RPC when not present.
+   */
+  cancel?: (request: ConvertCancelRequest) => Promise<void>
+}
+
 export interface PluginHandlers {
   filesystem?: FilesystemHandlers
   indexer?: IndexerHandlers
@@ -93,6 +128,7 @@ export interface PluginHandlers {
   ui?: UIHandlers
   'media-scan'?: MediaScanHandlers
   'artwork-search'?: ArtworkSearchHandlers
+  convert?: ConvertHandlers
   [key: string]: unknown
 }
 
@@ -236,6 +272,37 @@ function registerArtworkSearch (client: PluginClient, handlers: ArtworkSearchHan
   })
 }
 
+function createConvertEmitters (client: PluginClient, sessionId: string): ConvertEmitters {
+  return {
+    reportProgress: (progress, message) => {
+      client.host.notify('convert.progress', {
+        sessionId,
+        progress,
+        message,
+      })
+    },
+  }
+}
+
+function registerConvert (client: PluginClient, handlers: ConvertHandlers): void {
+  client.registerMethod('convert.getOptions', async (params) => {
+    return handlers.getOptions(params as unknown as ConvertGetOptionsRequest)
+  })
+  client.registerMethod('convert.convert', async (params) => {
+    const request = params as unknown as ConvertRequest
+    return handlers.convert(request, createConvertEmitters(client, request.sessionId))
+  })
+  if (handlers.cancel) {
+    client.registerMethod('convert.cancel', async (params) => {
+      // Call through `handlers` (not a destructured ref) so a class-based
+      // handler keeps its `this`, matching every other handler here; `?.`
+      // avoids a non-null assertion.
+      await handlers.cancel?.(params as unknown as ConvertCancelRequest)
+      return null
+    })
+  }
+}
+
 // ── Main entry point ────────────────────────────────────
 
 // Keyed by every manifest Capability, plus the handler-only `ui` key. Adding a
@@ -248,6 +315,7 @@ const capabilityRegistrars: Record<Capability | 'ui', (client: PluginClient, han
   ui: (c, h) => registerUI(c, h as UIHandlers),
   'media-scan': (c, h) => registerMediaScan(c, h as MediaScanHandlers),
   'artwork-search': (c, h) => registerArtworkSearch(c, h as ArtworkSearchHandlers),
+  convert: (c, h) => registerConvert(c, h as ConvertHandlers),
 }
 
 export function createPlugin (handlers: PluginHandlers): PluginInstance {

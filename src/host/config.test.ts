@@ -40,6 +40,7 @@ describe('host config API', () => {
         })
         return { ok: true }
       }) as HostTransport['call'],
+      sendNotification: () => {},
       onNotification: () => () => {},
     }
 

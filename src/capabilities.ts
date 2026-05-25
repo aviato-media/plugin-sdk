@@ -53,6 +53,12 @@ export const CAPABILITY_METADATA = [
     description:
       'Searches external sources for artwork (posters, covers, thumbnails) for library items.',
   },
+  {
+    id: 'convert',
+    label: 'Convert',
+    description:
+      'Converts or optimizes media files between formats and qualities (e.g. re-encoding a video to a mobile-friendly format).',
+  },
 ] as const satisfies ReadonlyArray<{ id: string,
   label: string,
   description: string }>

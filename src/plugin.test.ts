@@ -355,4 +355,118 @@ describe('createPlugin', () => {
     expect(instance.hooks).toBeDefined()
     expect(instance.views).toBeDefined()
   })
+
+  test('a capability explicitly set to undefined is skipped (no crash)', () => {
+    // Plugins commonly write `{ convert: enabled ? handlers : undefined }`.
+    // Object.entries yields ['convert', undefined], so the loop must not run
+    // the registrar — registerConvert dereferences handlers synchronously.
+    const instance = createPlugin({
+      convert: undefined,
+    })
+    const methods = getMethods(instance)
+    expect(methods.has('convert.convert')).toBe(false)
+    expect(methods.has('convert.getOptions')).toBe(false)
+  })
+
+  test('convert registers getOptions/convert and reportProgress emits a typed convert.progress', async () => {
+    const instance = createPlugin({
+      convert: {
+        getOptions: async () => ({
+          fields: [],
+        }),
+        convert: async (request, emitters) => {
+          emitters.reportProgress(0.5, 'encoding video stream')
+          emitters.reportProgress(null)
+          return {
+            outputPath: request.outputPath,
+            mimeType: 'video/mp4',
+          }
+        },
+      },
+    })
+    const methods = getMethods(instance)
+    expect(methods.has('convert.getOptions')).toBe(true)
+    expect(methods.has('convert.convert')).toBe(true)
+    // cancel was not provided → not registered.
+    expect(methods.has('convert.cancel')).toBe(false)
+
+    await methods.get('convert.convert')!({
+      inputPath: '/in.mkv',
+      outputPath: '/out.mp4',
+      mimeType: 'video/x-matroska',
+      options: {},
+      sessionId: 'sess-1',
+    })
+
+    const progress = proc.stdout
+      .map(s => JSON.parse(s.trim()))
+      .filter(n => n.method === 'convert.progress')
+    expect(progress).toHaveLength(2)
+    // SDK binds sessionId and routes through the host facade — the plugin
+    // never hand-writes the method string or payload.
+    expect(progress[0].params).toEqual({
+      sessionId: 'sess-1',
+      progress: 0.5,
+      message: 'encoding video stream',
+    })
+    expect(progress[1].params).toEqual({
+      sessionId: 'sess-1',
+      progress: null,
+    })
+  })
+
+  test('convert.cancel is registered only when the handler is provided', async () => {
+    const cancelled: string[] = []
+    const instance = createPlugin({
+      convert: {
+        getOptions: async () => ({
+          fields: [],
+        }),
+        convert: async (request) => ({
+          outputPath: request.outputPath,
+          mimeType: 'video/mp4',
+        }),
+        cancel: async (request) => {
+          cancelled.push(request.sessionId)
+        },
+      },
+    })
+    const methods = getMethods(instance)
+    expect(methods.has('convert.cancel')).toBe(true)
+    const result = await methods.get('convert.cancel')!({
+      sessionId: 'sess-9',
+    })
+    expect(result).toBeNull()
+    expect(cancelled).toEqual(['sess-9'])
+  })
+
+  test('cancel keeps its `this` for class-based handlers', async () => {
+    const killed: string[] = []
+    class Transcoder {
+      readonly tag = 'transcoder'
+      async getOptions () {
+        return {
+          fields: [],
+        }
+      }
+      async convert (request: { outputPath: string }) {
+        return {
+          outputPath: request.outputPath,
+          mimeType: 'video/mp4',
+        }
+      }
+      async cancel (request: { sessionId: string }) {
+        // Dereferencing `this` throws if the method was detached.
+        killed.push(`${this.tag}:${request.sessionId}`)
+      }
+    }
+    const instance = createPlugin({
+      convert: new Transcoder(),
+    })
+    const methods = getMethods(instance)
+    await methods.get('convert.cancel')!({
+      sessionId: 'sess-2',
+    })
+    expect(killed).toEqual(['transcoder:sess-2'])
+  })
 })

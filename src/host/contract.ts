@@ -1,4 +1,5 @@
 import type { Account } from '../types/accounts.js'
+import type { ConvertProgressNotification } from '../types/convert.js'
 
 export type AccountChange = 'created' | 'updated' | 'deleted'
 
@@ -31,4 +32,17 @@ export interface HostNotifications {
     name: string
     change: AccountChange
   }
+}
+
+/**
+ * Central contract for notifications a plugin sends to the host (plugin→host).
+ *
+ * Each entry maps a JSON-RPC notification method name to its payload type.
+ * Emit one through the typed facade — `client.host.notify(method, payload)` —
+ * which is type-checked and autocompletes against this map. Adding a new
+ * outbound notification means adding an entry here; plugins never hand-write
+ * the method string or an untyped payload.
+ */
+export interface PluginNotifications {
+  'convert.progress': ConvertProgressNotification
 }

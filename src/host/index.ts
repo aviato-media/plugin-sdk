@@ -1,6 +1,6 @@
 import { type AccountsApi, createAccountsApi } from './accounts.js'
 import { type ConfigApi, createConfigApi } from './config.js'
-import type { HostMethods, HostNotifications } from './contract.js'
+import type { HostMethods, HostNotifications, PluginNotifications } from './contract.js'
 
 /**
  * Minimal transport surface the host wrappers depend on. `PluginClient`
@@ -9,6 +9,7 @@ import type { HostMethods, HostNotifications } from './contract.js'
  */
 export interface HostTransport {
   call<T = unknown> (method: string, params?: Record<string, unknown>, opts?: { timeoutMs?: number }): Promise<T>
+  sendNotification (method: string, params?: Record<string, unknown>): void
   onNotification (method: string, handler: (params: Record<string, unknown>) => void): () => void
 }
 
@@ -23,6 +24,10 @@ export interface HostApi {
     params: HostMethods[M]['params'],
     opts?: { timeoutMs?: number },
   ): Promise<HostMethods[M]['result']>
+  notify<N extends keyof PluginNotifications> (
+    method: N,
+    payload: PluginNotifications[N],
+  ): void
   onNotification<N extends keyof HostNotifications> (
     method: N,
     handler: (payload: HostNotifications[N]) => void,
@@ -35,6 +40,8 @@ export function createHostApi (transport: HostTransport): HostApi {
   return {
     call: (method, params, opts) =>
       transport.call(method, params as Record<string, unknown>, opts),
+    notify: (method, payload) =>
+      transport.sendNotification(method, payload as Record<string, unknown>),
     onNotification: (method, handler) =>
       transport.onNotification(method, handler as (params: Record<string, unknown>) => void),
     accounts: createAccountsApi(transport),
@@ -44,4 +51,4 @@ export function createHostApi (transport: HostTransport): HostApi {
 
 export type { AccountsApi } from './accounts.js'
 export type { ConfigApi } from './config.js'
-export type { AccountChange, HostMethods, HostNotifications } from './contract.js'
+export type { AccountChange, HostMethods, HostNotifications, PluginNotifications } from './contract.js'
