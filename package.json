@@ -19,6 +19,10 @@
       "types": "./dist/capabilities.d.ts",
       "import": "./dist/capabilities.js"
     },
+    "./manifest": {
+      "types": "./dist/types/manifest.d.ts",
+      "import": "./dist/types/manifest.js"
+    },
     "./tmpdir": {
       "types": "./dist/tmpdir.d.ts",
       "import": "./dist/tmpdir.js"
@@ -40,7 +44,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "bun build src/index.ts src/capabilities.ts src/tmpdir.ts --outdir dist --target bun --external zod --external picomatch && tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "build": "bun build src/index.ts src/capabilities.ts src/tmpdir.ts src/types/manifest.ts --outdir dist --target bun --external zod --external picomatch && tsc --emitDeclarationOnly -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint 'src/**/*.ts'",
     "lint:fix": "eslint --fix 'src/**/*.ts'",
