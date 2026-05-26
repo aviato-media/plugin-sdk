@@ -1,3 +1,9 @@
+## [1.5.0](https://github.com/aviato-media/plugin-sdk/compare/v1.4.0...v1.5.0) (2026-05-26)
+
+### Features
+
+* move plugin.json schema into SDK ([4fd1612](https://github.com/aviato-media/plugin-sdk/commit/4fd161273564a3683879f37903465474a1c9e252))
+
 ## [1.4.0](https://github.com/aviato-media/plugin-sdk/compare/v1.3.0...v1.4.0) (2026-05-25)
 
 ### Features
